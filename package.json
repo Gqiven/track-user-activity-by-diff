@@ -1,0 +1,15 @@
+{
+  "name": "track-user-activity-by-diff",
+  "version": "1.0.0",
+  "description": "记录用户操作，并通过比对前后差异，绘制步骤",
+  "main": "index.js",
+  "repository": "https://github.com/Gqiven/track-user-activity-by-diff.git",
+  "author": "xuqinwen<sdlytccf@163.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@rollup/plugin-node-resolve": "^13.3.0"
+  },
+  "scripts": {
+    "serve": "rollup -c -w"
+  }
+}
