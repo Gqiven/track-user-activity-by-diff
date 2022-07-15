@@ -4,36 +4,41 @@ export const diffProps = (
   oldValue = {},
   newValue = {},
   parentPath,
-  batchUpdates = []
+  batchUpdates = [],
+  ignoreProps
 ) => {
-  console.log(99, parentPath)
+  const needCheck = key => !ignoreProps || (ignoreProps && !ignoreProps.includes(key))
   // 先遍历旧节点的属性，找出新节点对应变动：改动和删除
   Object.keys(oldValue).forEach(key => {
-    let path = joinValidStr(parentPath, key)
-    if(targetHasOwnProperty(newValue, key)) {
-      // 属性值变动
-      newValue[key] !== oldValue[key] && batchUpdates.push({
-        type: '_props_edit',
-        path,
-        value: newValue[key]
-      })
-    }else {// 新值已删除此属性
-      batchUpdates.push({
-        type: '_props_delete',
-        path,
-        value: null
-      })
+    if(needCheck(key)) {
+      let path = joinValidStr(parentPath, key)
+      if(targetHasOwnProperty(newValue, key)) {
+        // 属性值变动
+        newValue[key] !== oldValue[key] && batchUpdates.push({
+          type: '_props_edit',
+          path,
+          value: newValue[key]
+        })
+      }else {// 新值已删除此属性
+        batchUpdates.push({
+          type: '_props_delete',
+          path,
+          value: null
+        })
+      }
     }
   })
   // 再遍历新节点，找出：新增
   Object.keys(newValue).forEach(key => {
-    if(!targetHasOwnProperty(oldValue, key)) {// 为新增属性
-      let path = joinValidStr(parentPath, key)
-      batchUpdates.push({
-        type: '_props_add',
-        path,
-        value: newValue[key]
-      })
+    if(needCheck(key)) {
+      if(!targetHasOwnProperty(oldValue, key)) {// 为新增属性
+        let path = joinValidStr(parentPath, key)
+        batchUpdates.push({
+          type: '_props_add',
+          path,
+          value: newValue[key]
+        })
+      }
     }
   })
 }
@@ -42,7 +47,8 @@ export const diffChildren = (
   oldChildren = [],
   newChildren = [],
   parentPath,
-  batchUpdates = []
+  batchUpdates = [],
+  ignoreProps
 ) => {
   const oldChildrenMap = oldChildren.reduce((map, item) => {
     map[item.id] = item
@@ -82,11 +88,21 @@ export const diffChildren = (
   })
 }
 
+/**
+ *
+ * @param {*} oldVNode
+ * @param {*} newVNode
+ * @param {*} parentPath
+ * @param {*} batchUpdates
+ * @param {*} ignoreProps : array 无需比对的props属性
+ * @returns
+ */
 export const diffDOM = (
   oldVNode = {},
   newVNode = {},
   parentPath = '',
-  batchUpdates = []
+  batchUpdates = [],
+  ignoreProps = ['diff-id']
 ) => {
   if(newVNode.id !== oldVNode.id) {
     // 节点不同，直接替换
@@ -97,8 +113,8 @@ export const diffDOM = (
     })
   }else {
     // 节点相同 比对 props（style、class、value）和子元素
-    diffProps(oldVNode.props, newVNode.props, parentPath || oldVNode.id, batchUpdates)
-    diffChildren(oldVNode.children, newVNode.children, parentPath || oldVNode.id, batchUpdates)
+    diffProps(oldVNode.props, newVNode.props, parentPath || oldVNode.id, batchUpdates, ignoreProps)
+    diffChildren(oldVNode.children, newVNode.children, parentPath || oldVNode.id, batchUpdates, ignoreProps)
   }
   return batchUpdates
 }

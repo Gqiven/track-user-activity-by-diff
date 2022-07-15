@@ -25,4 +25,3 @@ export const joinValidStr = (...args) => args.filter(s => !!s).join('|')
 
 // 有效的渲染节点
 export const isValidRenderNode = node => [document.TEXT_NODE, document.ELEMENT_NODE].includes(node.nodeType)
-

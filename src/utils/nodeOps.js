@@ -48,3 +48,37 @@ export const createVNodeElement = (dom, options, reserid) => {
 
   return vnode
 }
+
+
+export function createTextNode(text, rootContainerElement) {
+  return document.createTextNode(text)
+}
+
+
+export const createElement = (type) => {
+  return document.createElement(type);
+};
+
+
+
+export function createElementTree(vnode) {
+  let { text, type, props, children } = vnode
+  let domElement = type === '__text' ? createTextNode(text) : createElement(type)
+  // style class
+  props && Object.entries(props).forEach(([key, value]) => {
+    switch(key) {
+      case 'class':
+        domElement.className = value
+        break;
+      default:
+        domElement[key] = value
+    }
+  })
+  // children
+  if(children && children.length > 0) {
+    for(let child of children) {
+      domElement.appendChild(createElementTree(child))
+    }
+  }
+  return domElement;
+}

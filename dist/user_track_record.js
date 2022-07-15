@@ -61,6 +61,40 @@
     return vnode
   };
 
+
+  function createTextNode(text, rootContainerElement) {
+    return document.createTextNode(text)
+  }
+
+
+  const createElement = (type) => {
+    return document.createElement(type);
+  };
+
+
+
+  function createElementTree(vnode) {
+    let { text, type, props, children } = vnode;
+    let domElement = type === '__text' ? createTextNode(text) : createElement(type);
+    // style class
+    props && Object.entries(props).forEach(([key, value]) => {
+      switch(key) {
+        case 'class':
+          domElement.className = value;
+          break;
+        default:
+          domElement[key] = value;
+      }
+    });
+    // children
+    if(children && children.length > 0) {
+      for(let child of children) {
+        domElement.appendChild(createElementTree(child));
+      }
+    }
+    return domElement;
+  }
+
   const defaultParseOpts = {
     enableProp: true
   };
@@ -74,36 +108,41 @@
     oldValue = {},
     newValue = {},
     parentPath,
-    batchUpdates = []
+    batchUpdates = [],
+    ignoreProps
   ) => {
-    console.log(99, parentPath);
+    const needCheck = key => !ignoreProps || (ignoreProps && !ignoreProps.includes(key));
     // 先遍历旧节点的属性，找出新节点对应变动：改动和删除
     Object.keys(oldValue).forEach(key => {
-      let path = joinValidStr(parentPath, key);
-      if(targetHasOwnProperty(newValue, key)) {
-        // 属性值变动
-        newValue[key] !== oldValue[key] && batchUpdates.push({
-          type: '_props_edit',
-          path,
-          value: newValue[key]
-        });
-      }else {// 新值已删除此属性
-        batchUpdates.push({
-          type: '_props_delete',
-          path,
-          value: null
-        });
+      if(needCheck(key)) {
+        let path = joinValidStr(parentPath, key);
+        if(targetHasOwnProperty(newValue, key)) {
+          // 属性值变动
+          newValue[key] !== oldValue[key] && batchUpdates.push({
+            type: '_props_edit',
+            path,
+            value: newValue[key]
+          });
+        }else {// 新值已删除此属性
+          batchUpdates.push({
+            type: '_props_delete',
+            path,
+            value: null
+          });
+        }
       }
     });
     // 再遍历新节点，找出：新增
     Object.keys(newValue).forEach(key => {
-      if(!targetHasOwnProperty(oldValue, key)) {// 为新增属性
-        let path = joinValidStr(parentPath, key);
-        batchUpdates.push({
-          type: '_props_add',
-          path,
-          value: newValue[key]
-        });
+      if(needCheck(key)) {
+        if(!targetHasOwnProperty(oldValue, key)) {// 为新增属性
+          let path = joinValidStr(parentPath, key);
+          batchUpdates.push({
+            type: '_props_add',
+            path,
+            value: newValue[key]
+          });
+        }
       }
     });
   };
@@ -112,7 +151,8 @@
     oldChildren = [],
     newChildren = [],
     parentPath,
-    batchUpdates = []
+    batchUpdates = [],
+    ignoreProps
   ) => {
     const oldChildrenMap = oldChildren.reduce((map, item) => {
       map[item.id] = item;
@@ -152,11 +192,21 @@
     });
   };
 
+  /**
+   *
+   * @param {*} oldVNode
+   * @param {*} newVNode
+   * @param {*} parentPath
+   * @param {*} batchUpdates
+   * @param {*} ignoreProps : array 无需比对的props属性
+   * @returns
+   */
   const diffDOM = (
     oldVNode = {},
     newVNode = {},
     parentPath = '',
-    batchUpdates = []
+    batchUpdates = [],
+    ignoreProps = ['diff-id']
   ) => {
     if(newVNode.id !== oldVNode.id) {
       // 节点不同，直接替换
@@ -167,16 +217,27 @@
       });
     }else {
       // 节点相同 比对 props（style、class、value）和子元素
-      diffProps(oldVNode.props, newVNode.props, parentPath || oldVNode.id, batchUpdates);
+      diffProps(oldVNode.props, newVNode.props, parentPath || oldVNode.id, batchUpdates, ignoreProps);
       diffChildren(oldVNode.children, newVNode.children, parentPath || oldVNode.id, batchUpdates);
     }
     return batchUpdates
+  };
+
+  // 将虚拟节点的数据 转化为真实DOM结构
+
+  const transformVNodeToDOM = (vnode, rootContainer) => {
+    let domElement = createElementTree(vnode);
+    // clean
+    rootContainer.innerHTML = '';
+    // render
+    rootContainer.appendChild(domElement);
   };
 
   exports.diffChildren = diffChildren;
   exports.diffDOM = diffDOM;
   exports.diffProps = diffProps;
   exports.mountVDom = mountVDom;
+  exports.transformVNodeToDOM = transformVNodeToDOM;
 
   Object.defineProperty(exports, '__esModule', { value: true });
 
